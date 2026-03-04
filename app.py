@@ -14,7 +14,6 @@ import json
 import os
 import re
 import time
-import random
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from pathlib import Path
@@ -586,66 +585,6 @@ def fetch_posts_twitterio(api_key: str, accounts: list, max_per_account: int = 3
     return posts_by_account
 
 
-def get_demo_posts(accounts: list) -> dict:
-    """Generate realistic demo data when no API keys are provided."""
-    demo_texts = [
-        ("@TrentTelenko", "B-52s operating over Iran airspace = air supremacy achieved. Pentagon confirmation changes strategic calculus significantly. Historical parallel: tanker escorts 1987-88. 🛢️⚓ #Hormuz"),
-        ("@TrentTelenko", "Iranian drone threat to USN carriers in Hormuz is real. We saw this playbook with Houthis — Iran has longer range, better drones. Insurance rates on tankers up 340% this week."),
-        ("@KurtSchlichter", "Don't fight back because it might make them mad. This is the actual argument being made. Yes, really. The restraint crowd never learns. 🪖"),
-        ("@KurtSchlichter", "They need to free their country. Tehran fatigue is real — the people there know the mullahs are dragging them to ruin. History will remember who stood where."),
-        ("@CynicalPublius", "Iran war fatigue among population is real but if kinetics are effective and sustained, different calculus. AI-generated conflict videos being used for disinfo — X suspending revenue sharing on flagged accounts."),
-        ("@cdrsalamander", "Unleash Chang. (Sarcastic.) 15 years of writing about Navy deployment abuse — now we're here. Fleet is stretched past any reasonable operational margin. Readiness is a prayer not a plan."),
-        ("@brentdsadler", "Dark fleet interdictions expanding significantly. Russia/Iran/Venezuela illicit oil networks under pressure. Chagos/Diego Garcia situation creates real vulnerability in Indo-Pacific denial strategy vs. China. @Heritage"),
-        ("@usmc_colonel", "France/Macron criticism of US strikes is noise. Rubio's War Powers stance is legally correct and strategically sound. Europe gets a veto on nothing here."),
-        ("@gCaptain", "Red Sea shipping update: 94% of container vessels still routing via Cape of Good Hope. Xeneta confirms no significant Suez return expected through 2026. Transit times +14-18 days, costs sticky."),
-        ("@MalShelbourne", "USNI: CNO confirms two carrier strike groups now in CENTCOM AOR. Unprecedented peacetime concentration. Logistics tail is the real story — fuel, ordnance, parts. #NavyReadiness"),
-        ("@JavierBlas", "Brent crude hits 82/bbl — highest since Feb 2025. Hormuz premium now baked in. Market pricing ~30% probability of meaningful disruption. WTI/Brent spread narrowing = US domestic production buffer shrinking. 🛢️"),
-        ("@mercoglianos", "Historical context: Last time Hormuz faced this level of disruption threat was Tanker War 1984-88. Insurance rates peaked +600%. US Navy reflagging op 'Earnest Will' required 50+ warships. We have fewer now."),
-        ("@mintzmyer", "Tanker demand up 18% YoY on rerouting. VLCC spot rates surging. $ZIM container exposure to Red Sea ~23% of revenue — watch Q2 guidance revision. $SBLK, $GOGL dry bulk largely unaffected. 🚢📊"),
-        ("@BDHerzinger", "Pacific Fleet implications of CENTCOM concentration: Taiwan Strait deterrence assets reduced. China reading this carefully. Opportunistic window may be opening. Never waste an adversary's distraction."),
-        ("@TheLtColUSMC", "Leadership principle: Never ask your people to do what you won't do yourself. Watching commanders lead from the front in this op. Standards matter. Excellence is a habit."),
-        ("@biancoresearch", "Iran risk premium = 8-12/bbl sustained if Hormuz stays open, 40-60/bbl spike if closed (even briefly). Dollar strengthening on safe haven flows. EM energy importers (India, Japan, S.Korea) severely exposed."),
-        ("@loriannlarocco", "Shipping CEO I spoke to: 'We're not putting crews through Hormuz right now, full stop.' War risk insurance quotes have tripled in 72 hours. This is not going back to normal quickly."),
-        ("@JesseKellyDC", "The people telling you not to respond to Iran have been wrong about Iran for 40 years. At some point pattern recognition has to kick in."),
-        ("@JackPosobiec", "Pentagon confirms B-52 sorties from Diego Garcia. This is the US showing escalatory capability, not just resolve. Different message than cruise missiles. Regime needs to understand the ladder."),
-        ("@Aviation_Intel", "B-52H Stratofortress assets tracked departing Diego Garcia. Multiple sorties. Weapons loadout consistent with deep strike mission profile. #OSINT #Iran"),
-    ]
-
-    posts_by_account = {}
-    for acct in accounts:
-        # Find matching demo texts
-        account_texts = [(h, t) for h, t in demo_texts if h == acct]
-        if not account_texts:
-            # Generate generic placeholder
-            account_texts = [(acct, f"Demo post from {acct} — connect X API for live data.")]
-
-        meta = ACCOUNT_METADATA.get(acct, {})
-        followers = meta.get("followers", random.randint(5000, 100000))
-
-        tweets = []
-        for i, (_, text) in enumerate(account_texts):
-            hours_ago = i * random.randint(2, 8)
-            post_time = datetime.now() - timedelta(hours=hours_ago)
-            tweets.append({
-                "id": str(random.randint(10**17, 10**18)),
-                "text": text,
-                "created_at": post_time.isoformat(),
-                "likes": random.randint(50, 5000),
-                "retweets": random.randint(10, 1500),
-                "replies": random.randint(5, 500),
-                "url": f"https://x.com/{acct.lstrip('@')}/status/DEMO",
-            })
-
-        posts_by_account[acct] = {
-            "user_id": str(random.randint(10**8, 10**9)),
-            "followers": followers,
-            "description": meta.get("bio", f"Account focused on maritime/military analysis"),
-            "tweets": tweets,
-            "demo": True,
-        }
-
-    return posts_by_account
-
 
 def fetch_market_data() -> dict:
     """Fetch live market data via yfinance."""
@@ -940,23 +879,28 @@ def do_refresh(x_bearer: str, grok_key: str, twitterio_key: str):
     if x_bearer:
         try:
             posts = fetch_posts_tweepy(x_bearer, st.session_state.accounts)
-            status.success(f"✅ Fetched posts via X API v2")
+            status.success(f"✅ Fetched live posts via X API v2")
         except Exception as e:
-            status.warning(f"X API error: {e} — trying fallback...")
+            status.warning(f"X API error: {e}")
             if twitterio_key:
+                status.info("Trying TwitterAPI.io fallback...")
                 posts = fetch_posts_twitterio(twitterio_key, st.session_state.accounts)
             else:
-                posts = get_demo_posts(st.session_state.accounts)
+                progress.empty()
+                st.error(f"X API failed and no fallback configured: {e}")
+                return
     elif twitterio_key:
         try:
             posts = fetch_posts_twitterio(twitterio_key, st.session_state.accounts)
-            status.success("✅ Fetched posts via TwitterAPI.io")
+            status.success("✅ Fetched live posts via TwitterAPI.io")
         except Exception as e:
-            status.warning(f"TwitterAPI.io error: {e} — using demo data")
-            posts = get_demo_posts(st.session_state.accounts)
+            progress.empty()
+            st.error(f"TwitterAPI.io failed: {e}")
+            return
     else:
-        status.warning("⚠️ No API keys — loading demo data. Add your X Bearer Token for live posts.")
-        posts = get_demo_posts(st.session_state.accounts)
+        progress.empty()
+        st.error("No API keys configured. Add X_BEARER_TOKEN or TWITTERIO_KEY to your .env file.")
+        return
 
     st.session_state.posts_cache = posts
     save_json(CACHE_FILE, posts)
@@ -980,11 +924,10 @@ def do_refresh(x_bearer: str, grok_key: str, twitterio_key: str):
             st.session_state.grok_analysis = analysis
             status.success("✅ Grok AI analysis complete")
         except Exception as e:
-            status.warning(f"Grok API error: {e} — generating fallback analysis")
-            st.session_state.grok_analysis = get_fallback_analysis(posts)
+            status.warning(f"Grok API error: {e}")
+            st.session_state.grok_analysis = None
     else:
-        status.info("ℹ️ No Grok key — generating structured analysis from post data")
-        st.session_state.grok_analysis = get_fallback_analysis(posts)
+        status.warning("ℹ️ No Grok key — add XAI_API_KEY to .env for AI analysis")
 
     progress.progress(90, text="Finalizing...")
 
@@ -1830,34 +1773,7 @@ def render_tab_analysis():
     analysis = st.session_state.grok_analysis
 
     if not analysis:
-        # Show the snapshot example from the brief
-        st.markdown(f"""
----
-## Dashboard Snapshot – {TODAY}
-
-> **No live analysis loaded yet.** Click **🔄 Refresh All Data** to generate AI-powered analysis.
-> Connect your xAI Grok API key for full intelligence reports.
-
----
-
-### Example Output (from brief):
-
-**Current Context (from live data):**
-
-Major escalation in Middle East — US/Israel strikes on Iran (including B-52 usage, confirmed Pentagon), Iranian
-retaliation threats, Houthi resurgence signaling attacks on shipping. Red Sea/Suez largely avoided again
-(carriers rerouting via Cape of Good Hope, Hormuz transits halted by some). No large-scale container return
-to Red Sea expected in 2026 per analysts (Xeneta, others). This weaponizes trade routes further.
-
-**Oil/Commodities Impact:**
-- Brent crude ~$81.8–82 USD/Bbl (up ~5%+ today, 13-month high, +17–18% past month) — driven by Iran conflict risks closing chokepoints.
-- WTI crude ~$74–75 USD/Bbl (similar sharp gains).
-- Risk: Strait of Hormuz/Bab el-Mandeb disruptions could spike prices further (echoing 2023–2025 Houthi crisis but amplified by direct Iran involvement).
-
----
-
-*Connect your APIs and click Refresh for live intelligence.*
-""")
+        st.info("Click **🔄 Refresh All Data & Re-Analyze** to generate the live Grok AI intelligence report.", icon="🧠")
         return
 
     # Download button
@@ -1896,13 +1812,6 @@ def main():
 </div>
 """, unsafe_allow_html=True)
 
-    # Demo mode notice
-    if not x_bearer and not twitterio_key:
-        st.info(
-            "📌 **Demo Mode** — Using simulated data. Add your API keys to the `.env` file for live posts and AI analysis.",
-            icon="ℹ️",
-        )
-
     # Big green refresh button
     col_refresh, col_status, col_last = st.columns([2, 4, 2])
     with col_refresh:
@@ -1917,8 +1826,7 @@ def main():
             n_accounts = len([a for a, d in st.session_state.posts_cache.items() if d.get("tweets")])
             n_posts = sum(len(d.get("tweets", [])) for d in st.session_state.posts_cache.values())
             st.markdown(
-                f"<div style='padding:10px; color:#8b949e;'>📊 {n_accounts} accounts loaded, "
-                f"{n_posts:,} posts in cache {'(DEMO)' if any(d.get('demo') for d in st.session_state.posts_cache.values()) else '(LIVE)'}</div>",
+                f"<div style='padding:10px; color:#8b949e;'>📊 {n_accounts} accounts · {n_posts:,} posts · LIVE</div>",
                 unsafe_allow_html=True,
             )
     with col_last:
@@ -1932,11 +1840,9 @@ def main():
         do_refresh(x_bearer, grok_key, twitterio_key)
         st.rerun()
 
-    # Auto-load demo on first visit
+    # Prompt to refresh if no data yet
     if not st.session_state.posts_cache:
-        with st.spinner("Loading demo data..."):
-            st.session_state.posts_cache = get_demo_posts(st.session_state.accounts)
-            st.session_state.grok_analysis = get_fallback_analysis(st.session_state.posts_cache)
+        st.info("👆 Click **🔄 Refresh All Data & Re-Analyze** to fetch live posts and run analysis.", icon="📡")
 
     # Main tabs
     tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([

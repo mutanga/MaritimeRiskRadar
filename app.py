@@ -414,29 +414,10 @@ def render_sidebar():
         st.markdown("### ⚓ Maritime Risk Radar")
         st.markdown("---")
 
-        # API Keys section
-        with st.expander("🔑 API Configuration", expanded=True):
-            x_bearer = st.text_input(
-                "X Bearer Token",
-                value=os.getenv("X_BEARER_TOKEN", ""),
-                type="password",
-                help="Required for fetching live X posts via official API v2",
-                key="x_bearer_token",
-            )
-            grok_key = st.text_input(
-                "xAI Grok API Key",
-                value=os.getenv("XAI_API_KEY", ""),
-                type="password",
-                help="Highly recommended – powers the AI analysis via api.x.ai/v1",
-                key="grok_api_key",
-            )
-            twitterio_key = st.text_input(
-                "TwitterAPI.io Key (optional)",
-                value=os.getenv("TWITTERIO_KEY", ""),
-                type="password",
-                help="Cheaper fallback if you want to avoid monthly X API costs",
-                key="twitterio_key",
-            )
+        # Keys loaded silently from .env — never displayed in UI
+        x_bearer = os.getenv("X_BEARER_TOKEN", "")
+        grok_key = os.getenv("XAI_API_KEY", "")
+        twitterio_key = os.getenv("TWITTERIO_KEY", "")
 
         st.markdown("---")
 
@@ -491,15 +472,13 @@ def render_sidebar():
 
         st.markdown("---")
 
-        # Status indicators
+        # Status indicators (keys loaded from .env, not displayed)
         st.markdown("### 📡 System Status")
-        has_x = bool(x_bearer)
-        has_grok = bool(grok_key)
-        has_tio = bool(twitterio_key)
-
-        st.markdown(f"{'🟢' if has_x else '🔴'} X API: {'Connected' if has_x else 'Not configured'}")
-        st.markdown(f"{'🟢' if has_grok else '🟡'} Grok AI: {'Connected' if has_grok else 'Not configured'}")
-        st.markdown(f"{'🟢' if has_tio else '⚪'} TwitterAPI.io: {'Active' if has_tio else 'Not set'}")
+        st.markdown(f"{'🟢' if x_bearer else '🔴'} X API: {'Connected' if x_bearer else 'Not configured'}")
+        st.markdown(f"{'🟢' if grok_key else '🟡'} Grok AI: {'Connected' if grok_key else 'Not configured'}")
+        st.markdown(f"{'🟢' if twitterio_key else '⚪'} TwitterAPI.io: {'Active' if twitterio_key else 'Not set'}")
+        if not x_bearer and not grok_key:
+            st.caption("Add keys to your .env file")
 
         if st.session_state.last_refresh:
             st.markdown(f"🕐 Last refresh: {st.session_state.last_refresh}")
@@ -1920,8 +1899,7 @@ def main():
     # Demo mode notice
     if not x_bearer and not twitterio_key:
         st.info(
-            "📌 **Demo Mode** — Using simulated data. Add your X Bearer Token (sidebar) for live posts. "
-            "Add your xAI Grok API key for AI-powered analysis.",
+            "📌 **Demo Mode** — Using simulated data. Add your API keys to the `.env` file for live posts and AI analysis.",
             icon="ℹ️",
         )
 

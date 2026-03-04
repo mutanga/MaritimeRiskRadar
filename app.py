@@ -22,7 +22,13 @@ from pathlib import Path
 # CONFIG & CONSTANTS
 # ─────────────────────────────────────────────────────────────────────────────
 
-load_dotenv()
+# Load .env from the same directory as this script, regardless of working directory
+load_dotenv(dotenv_path=Path(__file__).parent / ".env", override=True)
+
+# API keys — loaded once at startup from .env, never exposed in UI
+X_BEARER_TOKEN  = os.getenv("X_BEARER_TOKEN", "")
+XAI_API_KEY     = os.getenv("XAI_API_KEY", "")
+TWITTERIO_KEY   = os.getenv("TWITTERIO_KEY", "")
 
 APP_TITLE = "Maritime Risk Radar Dashboard"
 APP_SUBTITLE = "Naval, Maritime & Commodities Tracker"
@@ -413,11 +419,6 @@ def render_sidebar():
         st.markdown("### ⚓ Maritime Risk Radar")
         st.markdown("---")
 
-        # Keys loaded silently from .env — never displayed in UI
-        x_bearer = os.getenv("X_BEARER_TOKEN", "")
-        grok_key = os.getenv("XAI_API_KEY", "")
-        twitterio_key = os.getenv("TWITTERIO_KEY", "")
-
         st.markdown("---")
 
         # Account management
@@ -471,13 +472,11 @@ def render_sidebar():
 
         st.markdown("---")
 
-        # Status indicators (keys loaded from .env, not displayed)
+        # Status indicators — keys loaded from .env at startup, never displayed
         st.markdown("### 📡 System Status")
-        st.markdown(f"{'🟢' if x_bearer else '🔴'} X API: {'Connected' if x_bearer else 'Not configured'}")
-        st.markdown(f"{'🟢' if grok_key else '🟡'} Grok AI: {'Connected' if grok_key else 'Not configured'}")
-        st.markdown(f"{'🟢' if twitterio_key else '⚪'} TwitterAPI.io: {'Active' if twitterio_key else 'Not set'}")
-        if not x_bearer and not grok_key:
-            st.caption("Add keys to your .env file")
+        st.markdown(f"{'🟢' if X_BEARER_TOKEN else '🔴'} X API: {'Connected' if X_BEARER_TOKEN else 'Not configured'}")
+        st.markdown(f"{'🟢' if XAI_API_KEY else '🟡'} Grok AI: {'Connected' if XAI_API_KEY else 'Not configured'}")
+        st.markdown(f"{'🟢' if TWITTERIO_KEY else '⚪'} TwitterAPI.io: {'Active' if TWITTERIO_KEY else 'Not set'}")
 
         if st.session_state.last_refresh:
             st.markdown(f"🕐 Last refresh: {st.session_state.last_refresh}")
@@ -485,7 +484,7 @@ def render_sidebar():
         st.markdown("---")
         st.caption("Maritime Risk Radar v1.0 · 2026")
 
-    return x_bearer, grok_key, twitterio_key
+    # Keys are module-level constants — nothing to return
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1800,8 +1799,12 @@ def render_tab_analysis():
 # ─────────────────────────────────────────────────────────────────────────────
 
 def main():
-    # Sidebar
-    x_bearer, grok_key, twitterio_key = render_sidebar()
+    # Sidebar (renders UI; keys come from module-level constants, not returned)
+    render_sidebar()
+    # Use module-level constants loaded from .env at startup
+    x_bearer = X_BEARER_TOKEN
+    grok_key = XAI_API_KEY
+    twitterio_key = TWITTERIO_KEY
 
     # Header banner
     st.markdown(f"""
